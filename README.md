@@ -1,1 +1,788 @@
-# trex_research
+ARAŞTIRMA & RAPORLAMA ÖDEVİ (.NET)
+
+.NET Backend Geliştirme – Temel Bilgi ve Kavramlar
+
+1. Modern Yazılım Geliştirme Pratikleri
+   
+- Git nedir? GitHub nedir?
+  
+  Git bir versiyon kontrol sistemidir. Projenin her zaman son haline ulaşmamızı ve güncel tutmamızı sağlayan bir araçtır. Projenin bir çok kişi ile aynı anda yapılabilmesini sağlar.
+  Github ise projelerimizin saklandığı uzak sunucudur. Github’a projelerinizi ekleyebilir aynı zamanda istediğiniz public olan farklı projelere Github üzerinden erişerek projeyi bilgisayarınıza indirebilirsiniz. Hatta istediğinizde bu projeler üzerinde değişiklikler yaparak Pull Request gönderebilirsiniz.
+- Temel Git komutları: init, clone, add, commit, push, pull, branch, merge
+  
+  git init : Bir Repository oluşturur ve biz bu Repositort’i Github’a gönderebiliriz. (git init)
+  git clone : Uzak sunucudaki bir projeyi bilgisayarımıza indirmek istediğimizde aşağıdaki komutu yazarak localimize indirebiliriz. (“git clone <proje linki>)
+  git add : Bu komut ile yaptığımız değişiklikler Git’e eklenir. (git add deneme.txt)
+  git commit : Bu komut ile yapılan değişiklikler local Repository’e kaydedilir. (git commit -m “commit mesajı”)
+  git push : Localde yapılan değişiklikleri uzak sunucuya (Github vs.) gönderme işlemidir. (git push)
+  git pull : Uzak sunucudaki değişiklikleri veya herhangi bir projeyi localimize çekmek için kullanılır. Aşağıdaki komut master branchindeki değişiklikleri localimize çekmemize yarar. (git pull origin master)
+  git branch : Komutu ile yeni branch oluştururuz.
+(git branch development)
+  get merge : İki veya daha fazla geliştirme geçmişini birleştirmektir.
+          A---B---C topic
+         /
+    D---E---F---G master
+- Merge conflict nedir, nasıl çözülür?
+  
+  Merge conflict, Git iki branch’i birleştirirken aynı dosyanın aynı satırlarında farklı değişiklikler olduğunu gördüğünde ortaya çıkar.
+  Birleştirme çakışmasını çözmenin en doğrudan yolu, çakışan dosyayı düzenlemektir. Dosyayı merge.txtfavori düzenleyicinizde açın. Örneğimizde, tüm çakışan ayırıcıları kaldıralım. Değiştirilmiş merge.txtiçerik şu şekilde görünmelidir:
+  
+this is some content to mess with
+content to append
+totally different content to merge later
+
+  Dosya düzenlendikten sonra, git add merge.txtbirleştirilmiş yeni içeriği hazırlamak için kullanın. Birleştirmeyi tamamlamak için şu komutu çalıştırarak yeni bir commit oluşturun:
+
+git commit -m "merged and resolved the conflict in merge.txt"
+
+  Git, çakışmanın çözüldüğünü görecek ve birleştirmeyi tamamlamak için yeni bir birleştirme taahhüdü oluşturacaktır.
+  
+-CI/CD nedir? Azure DevOps, GitHub Actions ile pipeline örnekleri
+
+ CI/CD, Continuous Integration (Sürekli Entegrasyon) ve Continuous Deployment (Sürekli Dağıtım) anlamına gelir.
+CI (Continuous Integration): Kodunuzu her commit attığınızda otomatik olarak test edilir, build alınır
+CD (Continuous Deployment): Test edilen kod otomatik olarak production ortamına deploy edilir
+
+Azure DevOps 
+Artıları:
+Microsoft ekosistemiyle mükemmel entegrasyon
+Güçlü YAML pipeline sistemi
+Ücretsiz private repository’ler
+Enterprise-grade güvenlik
+Eksileri:
+UI biraz karmaşık olabilir
+Learning curve var
+Ne zaman kullanmalı: .NET projeleri, enterprise ortamlar, Microsoft Azure kullanıyorsanız
+
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '18.x'
+  npmCache: $(Pipeline.Workspace)/.npm
+
+stages:
+  - stage: Build
+    displayName: 'Build ve Test'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build ve Test İşlemleri'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Node.js $(nodeVersion) Kurulumu'
+
+          - task: Cache@2
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(npmCache)
+            displayName: 'NPM Cache'
+
+          - script: |
+              npm ci --cache $(npmCache) --prefer-offline
+            displayName: 'NPM Dependencies Yükleme'
+
+          - script: |
+              npm run lint
+            displayName: 'Linting Kontrolleri'
+
+          - script: |
+              npm run test:coverage
+            displayName: 'Unit Testler ve Coverage'
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testRunner: JUnit
+              testResultsFiles: 'coverage/junit.xml'
+            displayName: 'Test Sonuçlarını Yayınla'
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: Cobertura
+              summaryFileLocation: 'coverage/cobertura-coverage.xml'
+            displayName: 'Coverage Raporunu Yayınla'
+
+          - script: |
+              npm run build
+            displayName: 'TypeScript Build'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: 'dist'
+              ArtifactName: 'app-build'
+            displayName: 'Build Artifacts Yayınla'
+
+GitHub Actions 
+Artıları:
+GitHub ile native entegrasyon
+Büyük marketplace ekosistemi
+Kolay kullanım
+Open source projeler için ücretsiz
+Eksileri:
+Private repo’larda dakika sınırı
+Bazen yavaş olabiliyor
+Ne zaman kullanmalı: Open source projeler, GitHub kullanıyorsanız, basit workflow’lar
+
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Node.js Setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Lint
+        run: npm run lint
+      
+      - name: Test
+        run: npm run test:coverage
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+
+  deploy-staging:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Staging
+        run: echo "Staging'e deploy ediliyor..."
+
+  deploy-production:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to Production
+        run: echo "Production'a deploy ediliyor..."
+
+- Software Development Life Cycle (SDLC) Yazılım geliştirme sürecinin aşamaları (Planlama, analiz,geliştirme, test, dağıtım, bakım)
+
+1. Planlama
+Proje kapsamını, hedeflerini ve gereksinimleri belirlenir. (İlk proje planı)
+2. Analiz
+Proje gereksinimleri hakkında veri toplanır ve gözden geçirilir.(Tamamen ayrıntılı gereksinim belgeleri)
+3. Tasarım
+Proje mimarisini tanımlar. Yazılım tasarım belgesi (SDD)
+4. Kodlama
+Başlangıç kodunu yazar. Fonksiyonel yazılım prototipidir.
+5. Test
+Kodu gözden geçirir ve hatalar ortadan kaldırılır. Rafine, optimize edilmiş yazılımdır.
+6. Dağıtım
+Kodu üretim ortamına dağıtır.Son kullanıcılar için mevcut yazılımdır.
+7. Bakım
+Sürekli düzeltmeler ve iyileştirmeler yapılır. Güncellenmiş ve optimize edilmiş koddur.
+
+1. Planlama
+Proje planlama aşaması, bir yazılım geliştirme projesinin hedeflerini ve kapsamını belirler.
+2. Analiz
+Analiz aşamasında, geliştirme ekibi projenin gereksinimleri hakkında bilgi toplar ve analiz eder. Analiz, ekibin planlama aşamasında başladıkları işi ilerletmesini ve üst düzey bir fikirden pratik bir uygulama planına geçmesini sağlar.
+3. Tasarım
+Tasarım aşaması, projenin mimarisini tanımlamayı içerir. Temel adımlar, yazılımın navigasyonunu, kullanıcı arayüzlerini, veritabanı tasarımını ve daha fazlasını özetlemeyi içerir.
+4. Kodlama
+Kodlama aşaması veya geliştirme aşaması, ekibin önceki aşamalarda oluşturulan SDD, SRS ve diğer yönergelere dayanarak kodu yazmaya ve yazılımı oluşturmaya başlamasıdır.
+5. Test
+Test aşaması, geliştirme ekibi işlevsel bir yazılım parçası oluşturduktan sonra başlar. Bu aşamada ekip, hataları ortadan kaldırmak ve nihai ürünü geliştirmek için fırsatlar arar.
+6. Dağıtım
+Dağıtım aşamasında, kullanıcıların erişebileceği üretim ortamına ince ayarlı yazılım dağıtılır.
+7. Bakım
+Bakım aşaması, yazılım ekiplerinin yazılımın sürekli çalışmasını sağlamaya yardımcı olmak için yaptığı dağıtım sonrası çalışmaları gerektirir: güncellemeleri, öngörülemeyen değişiklikler yapmak, yeni kullanım durumlarını ele almak ve kullanıcıların bulduğu hataları bastırmak.
+
+- Agile/Scrum/Kanban metodolojileri
+
+Agile (Çevik)
+Agile, yazılım geliştirmede esnek, iteratif ve müşteri odaklı bir yaklaşımdır.
+Büyük planlar yerine küçük parçalara bölerek sık geri bildirimle ilerlemeyi hedefler. Özellikleri: Değişime hızlı uyum, kısa geliştirme döngüleri, sürekli geri bildirim
+
+Scrum
+Scrum, Agile’ın en yaygın kullanılan çerçevesidir (framework).
+Geliştirme süreci Sprint adı verilen kısa zaman dilimlerine bölünür 
+Temel kavramlar: Sprint, Product Owner, Scrum Master, Daily Scrum
+
+Kanban
+Kanban, işlerin görsel bir pano üzerinden yönetildiği, akış odaklı bir yöntemdir. Sprint yoktur, işler sürekli ilerler.
+Özellikleri: Kanban board (To Do – In Progress – Done), aynı anda yapılan iş sayısını sınırlar (WIP), sürekli teslimat
+
+2. .NET Ekosistemi
+
+-.NET nedir? Tarihçesi, amacı, neden kullanılır?
+
+.NET, Microsoft tarafından geliştirilen, çok dilli, açık kaynak ve platform bağımsız bir yazılım geliştirme platformudur. Web, masaüstü, mobil, oyun ve bulut uygulamaları geliştirmek için kullanılır.
+
+.NET’in tarihçesi
+2000 → Microsoft tarafından duyuruldu.
+2002 → İlk sürüm (.NET Framework 1.0) yayınlandı.
+2016 → .NET Core çıktı. (açık kaynak ve cross-platform)
+2020 → .NET Framework ve .NET Core birleşti → .NET 5
+Günümüzde → .NET 6 / 7 / 8 ile aktif olarak geliştirilmektedir.
+
+.NET’in amacı
+Farklı platformlarda çalışan uygulamalar geliştirmek. Güvenli, performanslı ve ölçeklenebilir sistemler oluşturmak. Geliştirme sürecini kolaylaştırmak ve standartlaştırmak. 
+
+.NET neden kullanılır? 
+C#, F#, VB.NET gibi dilleri destekler. Web (ASP.NET), masaüstü, mobil (MAUI) geliştirme imkânı sunar. Yüksek performans ve güvenlik sağlar. Geniş kütüphane ve topluluk desteği vardır. Azure ile güçlü entegrasyon sunar.
+
+- .NET Framework, .NET Core ve .NET 7/8+ farkları
+
+| Özellik | .NET Framework | .NET Core | .NET 7 / 8+ |
+|------|---------------|----------|-------------|
+| İlk Çıkış | 2002 | 2016 | 2022+ |
+| Geliştirici | Microsoft | Microsoft + Topluluk | Microsoft + Topluluk |
+| Platform Desteği | Sadece Windows | Windows, Linux, macOS | Windows, Linux, macOS |
+| Açık Kaynak | ❌ Hayır | ✅ Evet | ✅ Evet |
+| Mimari | Monolitik | Modüler | Birleşik ve Modüler |
+| Performans | Orta | Yüksek | Çok Yüksek |
+| CLI Desteği | Zayıf | Güçlü | Çok Güçlü |
+| Cloud Uyumu | Sınırlı | İyi | Çok İyi |
+| Docker Desteği | ❌ | ✅ | ✅ |
+| Mikroservis Desteği | ❌ | ✅ | ✅ |
+| Web Framework | ASP.NET | ASP.NET Core | ASP.NET Core |
+| Masaüstü | WinForms, WPF | Sınırlı | WinForms, WPF |
+| Mobil Geliştirme | ❌ | ❌ | ✅ (.NET MAUI) |
+| Güvenlik Güncellemeleri | Sınırlı | Sonlandırıldı | Aktif |
+| LTS Desteği | ❌ | ❌ | ✅ (.NET 8) |
+| Yeni Projeler İçin | ❌ Önerilmez | ❌ Önerilmez | ✅ Önerilir |
+
+
+| Temel Alınan | .NET Core | .NET Framework | .NET 7 / 8+ |
+|-------------|----------|----------------|-------------|
+| Açık Kaynak | Açık kaynaklıdır. | Bazı bileşenleri açık kaynaklıdır. | Tamamen açık kaynaklıdır. |
+| Çapraz Platform | Windows, Linux ve macOS destekler. | Sadece Windows üzerinde çalışır. | Windows, Linux, macOS (tam cross-platform). |
+| Uygulama Modelleri | Web, API ve mikroservis odaklıdır. | Web ve masaüstü (WinForms, WPF). | Web, API, masaüstü, mobil (.NET MAUI), mikroservis. |
+| Kurulum | Platformdan bağımsız paketlenir. | Windows için tek paket halinde kurulur. | Yan yana (side-by-side) kurulum destekler. |
+| Mikroservis Desteği | Mikroservis mimarisini destekler. | Mikroservis mimarisi için uygun değildir. | Mikroservis ve cloud-native mimariler için idealdir. |
+| REST API Desteği | REST API oluşturmayı destekler. | REST API desteği vardır. | REST API ve minimal API desteği vardır. |
+| Performans | Yüksek performanslıdır. | Performansı .NET Core’a göre düşüktür. | Çok yüksek performans (en optimize sürüm). |
+| Ölçeklenebilirlik | Yüksek ölçeklenebilirlik sunar. | Ölçeklenebilirlik sınırlıdır. | Cloud ve container ortamlarında yüksek ölçeklenebilirlik. |
+| Uyumluluk | Windows, Linux, macOS | Sadece Windows | Windows, Linux, macOS |
+| Android / Mobil | Xamarin üzerinden desteklenir. | Mobil geliştirme desteği yoktur. | .NET MAUI ile yerel mobil geliştirme desteklenir. |
+| Paketleme | NuGet paketleri şeklinde sunulur. | Tüm kütüphaneler birlikte gelir. | NuGet + modüler yapı |
+| Dağıtım Modeli | Yan yana sürüm çalıştırabilir. | Güncellemeler IIS ve sistem geneline etki eder. | Esnek, side-by-side ve container uyumlu. |
+| WCF Hizmetleri | Tam WCF desteği yoktur. | WCF için güçlü destek sunar. | WCF önerilmez, modern alternatifler kullanılır. |
+| CLI Araçları | Hafif ve güçlü CLI desteği vardır. | CLI desteği sınırlıdır. | Gelişmiş ve modern CLI araçları. |
+| Güvenlik | Modern güvenlik yaklaşımları kullanır. | Kod Erişim Güvenliği (CAS) vardır. | Güncel ve gelişmiş güvenlik mekanizmaları. |
+| Destek Durumu | Geliştirilmesi durduruldu. | Bakım modunda. | Aktif olarak geliştirilmektedir (LTS: .NET 8). |
+
+- Platformlar arası çalışabilir mi? (Windows, Linux, macOS)
+  
+  Evet, .NET Core ve .NET 7/8+ platformlar arası çalışabilir (Windows, Linux, macOS), ancak .NET Framework sadece Windows üzerinde çalışır.
+
+- dotnet --info çıktısı örneği ve yorumlama
+
+.NET SDK:
+ Version:           9.0.100-preview.7.24407.12
+ Commit:            d672b8a045
+ Workload version:  9.0.100-manifests.a8e34f65
+ MSBuild version:   17.12.0-preview-24374-02+48e81c6f1
+
+ (Version → Yüklü SDK sürümü. Burada 9.0.100-preview (önizleme sürüm).
+MSBuild version → Projelerin derlenmesinde kullanılan araç.)
+
+Çalışma Zamanı Ortamı:
+ OS Name:     Mac OS X
+ OS Version:  26.2
+ OS Platform: Darwin
+ RID:         osx-arm64
+ Base Path:   /usr/local/share/dotnet/sdk/9.0.100-preview.7.24407.12/
+
+ (OS Name / OS Version / OS Platform → Çalıştığın işletim sistemi bilgisi.
+RID → Runtime Identifier, burada osx-arm64, yani Apple M1/M2 işlemci tabanlı Mac. Base Path → SDK’nın sistemde kurulu olduğu dizin.)
+
+.NET iş yükleri yüklendi:
+Yeni bildirimler yüklenirken loose manifests kullanılacak şekilde yapılandırıldı.
+Görüntülenecek yüklü iş yükü yok.
+
+Host:
+  Version:      9.0.0-preview.7.24405.7
+  Architecture: arm64
+  Commit:       static
+
+.NET SDKs installed:
+  6.0.404 [/usr/local/share/dotnet/sdk]
+  6.0.405 [/usr/local/share/dotnet/sdk]
+  7.0.101 [/usr/local/share/dotnet/sdk]
+  7.0.102 [/usr/local/share/dotnet/sdk]
+  8.0.201 [/usr/local/share/dotnet/sdk]
+  9.0.100-preview.7.24407.12 [/usr/local/share/dotnet/sdk]
+
+  Sisteminde birden fazla SDK yüklü → farklı projeler farklı SDK’ları kullanabilir. Preview sürümü → en yeni özellikler deneme amaçlı.
+
+.NET runtimes installed:
+  Microsoft.AspNetCore.App 6.0.12 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 6.0.13 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 7.0.1 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 7.0.2 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 8.0.2 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 9.0.0-preview.7.24406.2 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.NETCore.App 6.0.12 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 6.0.13 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 7.0.1 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 7.0.2 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 8.0.2 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 9.0.0-preview.7.24405.7 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+
+Runtimes, uygulamaların çalıştırıldığı ortamı gösterir. Birden fazla runtime yüklü → eski projeler eski sürümle çalışabilir.
+
+Other architectures found:
+  None
+
+Environment variables:
+  Not set
+
+global.json file:
+  Not found
+  Başka platform mimarisi yok. Ortam değişkenleri default.
+global.json yok → SDK seçimi otomatik yapılır
+
+- Senkron ve Asenkron Programlama
+
+  Senkron görevler sırayla gerçekleşir; bir sonraki göreve geçmeden önce ilk görevi bitirmeniz gerekir. Örneğin, bir alışveriş uygulamasını ele alalım. Kullanıcı siparişini görüntülediğinde, yazı tipi boyutu artmalıdır. Önce geçmişi yüklemeyi ve yazı tipi boyutunu güncellemeyi beklemek yerine, eşzamansız programlama her iki işlemin de aynı anda gerçekleşmesini sağlayabilir.
+  Öte yandan, asenkron görevleri herhangi bir sırayla veya hatta eş zamanlı olarak yürütebilirsiniz. Örneğin, kullanıcılar çevrimiçi alışveriş yaparken tüm ürünlerini tek tek değil, birlikte satın almak isterler. Kullanıcı sepete her ürün eklediğinde siparişi tamamlamak yerine, senkron programlama tüm ürünler için ödeme yönteminin ve gönderim adresinin aynı anda seçilmesini sağlar.
+
+- async, await, Task, ConfigureAwait gibi anahtar kavramlar.
+
+  Async: Bir metodun asenkron çalışacağını belirtir. Bu metod await ile çağrılabilir ve bir Task veya Task<T> döndürür.
+
+public async Task<int> GetirAsync() { ... }
+
+  Await : Asenkron bir işlemin bitmesini beklemek için kullanılır. Kodun geri kalanı bloklanmadan çalışmaya devam eder.
+
+public async Task<int> GetirAsync()
+{
+    await Task.Delay(1000);
+    return 42;
+}
+
+  Task : .NET’te asenkron işlemleri temsil eden bir nesnedir. void yerine Task veya Task<T> döndürür.
+
+  public async Task<int> GetirAsync()
+{
+    await Task.Delay(1000);  
+    return 42;               
+}
+
+  ConfigureAwait : await’in hangi context’te devam edeceğini kontrol eder. Özellikle UI thread veya ASP.NET context’lerinde önemlidir.
+
+  public async Task<int> GetirAsync()
+{
+    // false: UI context’e dönmeden arka planda devam et
+    await Task.Delay(1000).ConfigureAwait(false);
+    return 42;
+}
+
+- arrow function (=>) ifadesinin C#’taki yeri
+
+| Kullanım Alanı                | Örnek                                 | Açıklama                                |
+|-------------------------------|--------------------------------------|----------------------------------------|
+| Lambda İfadeleri              | `x => x * x`                          | Tek satırlık anonim fonksiyon          |
+| Expression-bodied Metot       | `int Topla(int a, int b) => a + b;`  | Tek satırda return                      |
+| Expression-bodied Property    | `public string AdSoyad => Ad + " " + Soyad;` | Tek satırlık property                   |
+| LINQ / Koleksiyon İşlemleri   | `sayilar.Select(x => x * x)`          | Koleksiyon elemanları üzerinde kısa fonksiyon |
+
+3. Backend Geliştirme Temelleri
+   
+- Backend nedir? Frontend ile farkları
+
+  Front-end, kullanıcının gördüğü ve etkileşimde bulunduğu her şeyden sorumluyken, Back-end bu işlemlerin arka planda nasıl gerçekleştiğiyle ilgilenir. Front-end geliştiricileri, görsel tasarım ve kullanıcı deneyimine odaklanırken, Back-end geliştiricileri veri işleme, güvenlik ve performans konularında çalışır.
+
+- Web sunucusu nedir? API nedir? API türleri
+
+  Web Sunucusu : İnternet üzerinden gelen HTTP isteklerini alan ve yanıtlayan bilgisayar yazılımı veya sistem.
+  API (Application Programming Interface) : Uygulamalar veya sistemler arasında veri ve işlev paylaşımını sağlayan arayüz.
+  API Türleri: REST, SOAP, GraphQL, gRPC, WebSocket
+
+- HTTP nedir? HTTP metodları: GET, POST, PUT, DELETE
+
+  HTTP (Hypertext Transfer Protocol), istemci ve sunucu arasında veri transferini sağlayan protokoldür. Web tarayıcıları, mobil uygulamalar veya API istemcileri HTTP üzerinden veri alır ve gönderir.
+
+| HTTP Metodu | Amaç / İşlevi | Örnek Kullanım | Açıklama |
+|-------------|---------------|----------------|----------|
+| **GET**     | Veri **okuma** | `/products` → Tüm ürünleri getir<br>`/products/123` → ID 123 olan ürünü getir | Request body içermez. Sadece veri almak için kullanılır. |
+| **POST**    | Yeni veri **oluşturma** | `/products` → Yeni ürün ekler<br>Request body: `{ "name":"Sneakers", "color":"blue", "price":59.95, "currency":"USD" }` | Request body ile gönderilen veriler sunucuda yeni kaynak oluşturur. |
+| **PUT**     | Mevcut veriyi **güncelleme / değiştirme** | `/products/123` → ID 123 olan ürünü tamamen değiştirir | Body’de belirtilmeyen alanlar silinir; yeni alanlar eklenir. |
+| **DELETE**  | Veri **silme** | `/products/123` → ID 123 olan ürünü siler | Yetkilendirme gerekebilir; kaynak kalıcı olarak silinir. |
+
+- RESTful servislerin çalışma mantığı
+
+  REST (Representational State Transfer), web servislerini kaynak (resource) temelli ve stateless (durumsuz) olarak tasarlamak için kullanılan bir mimari tarzıdır.
+  RESTful servisler, HTTP protokolünü kullanarak istemci ve sunucu arasında veri paylaşır.
+
+- JSON veri formatı ve kullanım amacı
+  
+  JSON (JavaScript Object Notation), veri depolamak ve taşımak için kullanılan basit, bağımsız bir veri değişim formatıdır. Amacı, sistemler arasında veri alışverişini standart ve anlaşılır bir biçimde sağlamak.
+Örnek Kullanım: Web uygulaması ile sunucu arasında veri iletmek, API yanıtlarını göndermek veya almak, konfigürasyon dosyalarını saklamak
+
+{
+  "isim": "Ahmet",
+  "yas": 25,
+  "sehir": "İstanbul"
+}
+
+- SOAP ve GraphQL nedir, REST’ten farkları
+
+  GraphQL API’ler için tek uç nokta üzerinden çalışan bir sorgu dilidir. İstemciler sadece ihtiyaç duydukları veriyi talep edebilir, iç içe sorguları destekler ve şema üzerinden veri tiplerini tanımlar. Gerçek zamanlı güncellemeler ve abonelikler ile modern web ve mobil uygulamalar için esneklik sağlar.
+  SOAP ise XML tabanlı bir mesajlaşma protokolüdür ve yüksek güvenlik, güvenilirlik ile kurumsal uyumluluk gerektiren sistemlerde kullanılır. WSDL ile resmi istemci-sunucu sözleşmesi tanımlar, durumlu veya durumsuz işlemleri destekler ve WS-Security ile mesaj düzeyinde şifreleme, imza ve kimlik doğrulamayı sağlar.
+
+# REST API, GraphQL ve SOAP Karşılaştırma Tablosu
+
+| Bakış Açısı | REST API | GraphQL | SOAP |
+|-------------|----------|---------|------|
+| Veri Formatı | JSON / XML | Şemaya göre yapılandırılmış JSON | XML |
+| Uç Nokta | Birden fazla kaynağa özgü URL | Tek uç nokta (`/graphql`) | WSDL aracılığıyla tanımlanan tek uç nokta |
+| Sorgu Esnekliği | Sabit yapı, fazla/eksik veri çekme olasılığı | Esnek, istemci ihtiyaç duyduğu verileri belirler | Katı, sıkı istek/yanıt yapısı |
+| Gerçek Zamanlı Destek | Sınırlı (sorgulama / web kancaları) | Abonelikler desteklenir | Dahili olarak mevcut değil, ek protokollerle mümkün |
+| İşlem Desteği | Doğal olarak değil (Sagas gibi geçici çözümler) | Kalıtsal değil; özel mantık gerekebilir | Dahili (WS-AtomicTransaction) |
+| Güvenlik | Taşıma seviyesi (HTTPS, OAuth, JWT) | REST ile aynı; dikkatli yetkilendirme gerekir | Güçlü—WS-Security (şifreleme, imzalar) |
+| Şema ve Sözleşme | Genellikle gevşek; OpenAPI ile belgelenir | Güçlü tipli şema, iç gözlem | WSDL sözleşmesi ile katı |
+| Performans | Basit durumlar için verimli | Verimli; sorgulama maliyeti kontrol edilmeli | Ayrıntılı XML nedeniyle ağır |
+| Araçlar ve Topluluk | Kapsamlı (Postman, Insomnia) | Hızla büyüyor (Apollo, GraphiQL) | İstikrarlı; kurumsal odaklı (SoapUI) |
+| Sürümleme | URL veya başlıklarla sürümlendirme | Sürüm yok; eski özellikler kullanımdan kaldırılır | WSDL’ye bağlı; evrimleşmesi zor |
+| Popüler Kullanım Alanları | Web/mobil uygulamalar, halka açık API’ler, mikro hizmetler | Kontrol panelleri, mobil arayüzler, gerçek zamanlı sistemler | Bankacılık, telekomünikasyon, sağlık hizmetleri entegrasyonları |
+| Örnek Kullanım | Twitter, GitHub, Stripe | Facebook, Shopify, GitHub (v4) | PayPal, eski kurumsal sistemler |
+
+4. ASP.NET
+
+- ASP.NET ve ASP.NET Core nedir? Avantajları, farkları
+
+  ASP.NET, Microsoft tarafından geliştirilmiş, Windows tabanlı web uygulamaları ve API’ler oluşturmak için kullanılan web framework’üdür.
+  ASP.NET Core, ASP.NET’in yeni, açık kaynak ve platformlar arası sürümüdür. Windows, Linux ve macOS üzerinde çalışabilir. Daha hızlı ve hafif bir yapıya sahiptir.
+
+# ASP.NET vs ASP.NET Core Karşılaştırması
+
+| Özellik | ASP.NET | ASP.NET Core |
+|---------|---------|--------------|
+| Tanım | Microsoft'un Windows tabanlı web uygulamaları ve API framework’ü | ASP.NET’in tamamen yeniden tasarlanmış, açık kaynak ve platformlar arası sürümü |
+| Uyumluluk | Windows sunucularında en iyi performans, Linux üzerinde sınırlı destek | Windows, Linux ve macOS sunucularında çalışabilir |
+| Performans | Orta, ağır ve monolitik yapı | Modüler, hafif ve yüksek performans; platformlar arası ölçeklenebilir |
+| Ekosistem | 20 yıllık geçmiş, geniş kütüphane ve topluluk desteği | Hızla büyüyen ekosistem, modern web geliştirme için optimize edilmiş |
+| Destek | Yakında yalnızca güvenlik güncellemeleri alacak; yeni özellik geliştirilmez | Microsoft tarafından aktif olarak geliştirilmekte ve desteklenmekte |
+| Modern Web Desteği | Eski tip web uygulamaları, Web Forms, MVC | Web API, Razor Pages, Blazor, mikroservisler için ideal |
+| Hosting | IIS üzerinde | IIS, Nginx, Apache veya kendi sunucusu üzerinde |
+| Mikroservis Desteği | Sınırlı | Tam destek |
+
+- MVC nedir, ne için kullanılır?
+
+  MVC (Model-View-Controller), yazılım geliştirmede kullanılan bir tasarım desenidir. Uygulamanın üç ana bileşene ayrılmasını sağlar:
+Model: Veri ve iş mantığı (veritabanı, hesaplamalar)
+View: Kullanıcıya gösterilen arayüz (UI)
+Controller: Model ve View arasındaki iletişimi yöneten katman
+  MVC, özellikle web uygulamaları ve API’lerde sık kullanılır ve temiz, test edilebilir kod yapısı sağlar.
+
+- Middleware nedir, nasıl çalışır?
+
+  Middleware, farklı uygulamalar, sistemler ve veritabanları arasında etkileşim ve veri akışı sağlayan bulut hizmetleridir. Uygulamalar ve veriler arasında bir köprü görevi görür. Bu sayede sistemler arasında kesintisiz iletişim sağlar ve veri akışını düzenler.
+  Middleware Nasıl Çalışır?
+  HTTP isteği uygulamaya geldiğinde, middleware zinciri üzerinden geçer.
+Her middleware, isteği işleyebilir, değiştirebilir veya zincirdeki sonraki middleware’e iletebilir. Yanıt gönderilirken, middleware zincirinden ters yönde geçer ve yanıt üzerinde işlem yapabilir.
+
+- Startup.cs ya da Program.cs içindeki middleware sıralamasının açıklaması
+  
+  ASP.NET Core, HTTP isteklerini middleware zinciri (pipeline) üzerinden işler.
+Middleware’ler sırayla çalışır: sıra değişirse uygulama davranışı değişebilir.
+Yanlış sırada eklenen middleware, isteklerin düzgün işlenmemesine, yetkilendirme hatalarına veya hata yakalama sorunlarına yol açabilir.
+
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+// Hata yakalama middleware (en üstte olmalı)
+app.UseExceptionHandler("/Home/Error");
+
+// Statik dosya middleware
+app.UseStaticFiles();
+
+// Routing middleware
+app.UseRouting();
+
+// Yetkilendirme ve kimlik doğrulama
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Endpoint tanımları (en sonda)
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
+});
+
+app.Run();
+
+- Dependency Injection (DI) nedir, neden önemlidir?
+
+  Dependency Injection, bir sınıfın ihtiyaç duyduğu bağımlılıkları (diğer sınıflar, servisler veya nesneler) kendisi oluşturmak yerine dışarıdan alması prensibidir.
+  Gevşek bağlı, test edilebilir ve esnek uygulamalar geliştirmek için ASP.NET Core’da standart olarak kullanılır.
+  Örnek:
+  # Dependency Injection (DI) Örneği
+
+## Açıklama
+Dependency Injection (DI), bir sınıfın ihtiyaç duyduğu bağımlılıkları (servisler veya nesneler) **kendisi oluşturmak yerine dışarıdan alması** prensibidir. Bu sayede kod **gevşek bağlı, test edilebilir ve esnek** olur.
+
+## Örnek Kullanım
+
+csharp
+// 1️⃣ Servis Tanımı
+public interface IMessageService
+{
+    string GetMessage();
+}
+
+// Servisin implementasyonu
+public class EmailService : IMessageService
+{
+    public string GetMessage()
+    {
+        return "Email gönderildi!";
+    }
+}
+
+// 2️⃣ DI Konfigürasyonu (Program.cs veya Startup.cs)
+var builder = WebApplication.CreateBuilder(args);
+
+// IMessageService bağımlılığı EmailService ile eşleniyor
+builder.Services.AddScoped<IMessageService, EmailService>();
+
+var app = builder.Build();
+
+// 3️⃣ Controller’da Kullanımı
+public class HomeController : Controller
+{
+    private readonly IMessageService _messageService;
+
+    // DI sayesinde EmailService otomatik olarak inject edilir
+    public HomeController(IMessageService messageService)
+    {
+        _messageService = messageService;
+    }
+
+    public IActionResult Index()
+    {
+        var msg = _messageService.GetMessage();
+        return Content(msg); // Çıktı: "Email gönderildi!"
+    }
+}
+
+- Katmanlı Mimari (Layered Architecture)
+o Presentation, Business, Data Access katmanları
+o Service & Repository pattern
+
+### 1️⃣ Presentation Layer
+- Kullanıcı arayüzünü ve istemci isteklerini yönetir
+- Controller, View, API endpoint’leri burada yer alır
+- İş mantığı içermez, yalnızca **Business Layer** ile iletişim kurar
+
+### 2️⃣ Business Layer
+- Uygulamanın **iş kuralları ve iş mantığını** içerir
+- Verilerin nasıl işleneceğine karar verir
+- Presentation ile Data Access arasında köprü görevi görür
+
+### 3️⃣ Data Access Layer
+- Veritabanı işlemlerini yönetir (CRUD)
+- ORM (Entity Framework Core vb.) burada kullanılır
+- Verinin nasıl saklandığıyla ilgilenir
+
+---
+
+## Service & Repository Pattern
+
+### Service Pattern
+- **İş mantığını** controller’dan ayırmak için kullanılır
+- Controller → Service → Repository akışı sağlar
+- Kod tekrarını azaltır, test edilebilirliği artırır
+
+### Repository Pattern
+- Veritabanı erişimini soyutlamak için kullanılır
+- Business katmanının veritabanı detaylarını bilmesini engeller
+- ORM veya veritabanı değişikliklerini kolaylaştırır
+
+- Katmanlar arası ilişkiyi açıklayabilmek (diyagram veya çizim desteği)
+  
+- **Açıklama:**  
+  - Bağımlılıklar **içten dışa doğrudur**; Domain katmanı bağımsızdır.  
+  - Application, Domain ile etkileşir.  
+  - Infrastructure, Domain ve Application katmanları için dış sistemleri sağlar.  
+  - API/Presentation, Application ve Domain üzerinden veri alır ve kullanıcıya sunar.
+
+---
+
+| Özellik | Katmanlı Mimari | Clean Architecture |
+|---------|----------------|------------------|
+| Bağımlılık Yönü | Üstten alta (Presentation → Data Access) | İçten dışa (Domain bağımsız) |
+| Test Edilebilirlik | Orta | Yüksek |
+| Esneklik | Orta | Yüksek |
+| Kullanım | Küçük/orta web uygulamaları | Büyük, karmaşık ve uzun ömürlü uygulamalar |
+
+- Clean Architecture
+o Domain, Application, Infrastructure, API katmanları
+o Bağımlılıkların dışa akması ilkesi
+
+
+### 1️⃣ Domain Layer
+- Uygulamanın **çekirdeğidir**
+- Temel iş kuralları ve domain modelleri bulunur
+- Hiçbir dış katmana bağımlı değildir
+
+### 2️⃣ Application Layer
+- Use-case’ler, servisler ve iş akışları burada yer alır
+- Domain katmanını kullanır
+- Altyapı detaylarını bilmez
+
+### 3️⃣ Infrastructure Layer
+- Veritabanı, dosya sistemi, dış servisler, e-posta, cache vb.
+- Application ve Domain için gerekli **teknik detayları** sağlar
+- Repository ve dış servis implementasyonları burada bulunur
+
+### 4️⃣ API / Presentation Layer
+- Kullanıcı veya istemcilerle iletişim kurar
+- Controller, API endpoint’leri, UI bileşenleri
+- Application katmanını çağırır
+
+---
+
+## Bağımlılıkların Dışa Akması (Dependency Rule)
+
+- **Bağımlılıklar her zaman içe doğru olmalıdır**
+- İç katmanlar dış katmanları **bilmez**
+- Dış katmanlar iç katmanlara bağımlıdır
+
+5. Veritabanı ve ORM
+
+- SQL nedir?
+   SQL, yapılandırılmış veritabanlarıyla iletişim kurmak için kullanılan standart bir sorgulama dilidir. Veritabanlarından veri ekleme, okuma, güncelleme ve silme (CRUD) işlemlerini yapar.
+
+- İlişkisel ve ilişkisel olmayan veri tabanları arasındaki farklar
+  
+# İlişkisel vs İlişkisel Olmayan Veritabanları
+
+| Özellik | İlişkisel Veritabanı (RDBMS) | İlişkisel Olmayan Veritabanı (NoSQL) |
+|---------|------------------------------|-------------------------------------|
+| Veri Yapısı | Tablo, satır ve sütun | JSON, key-value, document, graph vb. |
+| Şema | Sabit, önceden tanımlanmış | Esnek, dinamik şema |
+| Örnek Sistemler | MySQL, PostgreSQL, SQL Server, Oracle | MongoDB, Cassandra, Redis, CouchDB |
+| Sorgulama Dili | SQL | API veya sorgu dili (MongoDB Query, CQL) |
+| İlişkiler | Tablo ilişkileri ile (JOIN) | Genellikle ilişki yok veya sınırlı |
+| Ölçeklenebilirlik | Dikey (daha güçlü sunucu) | Yatay (sunucu ekleyerek) |
+| Performans | Karmaşık ilişkilerde güçlü | Büyük veri ve yüksek trafikte optimize |
+| Uygulama Alanı | Bankacılık, muhasebe, kurumsal uygulamalar | Sosyal medya, gerçek zamanlı veri, IoT, büyük veri |
+| Veri Tutarlılığı | ACID (Atomicity, Consistency, Isolation, Durability) | BASE (Basically Available, Soft state, Eventually consistent) |
+
+- ORM nedir? Entity Framework Core nedir?
+
+  Object Relational Mapping(Nesne İlişkisel Eşleme) olarak açılımını yapabileceğimiz OOP tabanlı programlama dillerinde veritabanı tabloları ile bu tabloları temsil eden nesnelerin eşlenmesini ve bu nesneler üzerinden veritabanı işlemlerini gerçekleştirirken ihtiyaç duyulan sorguların otomatik generate edilmesini sağlayan bir yaklaşımdır.
+  Entity Framework, Microsoft’un .NET Core ve .NET 5/6+ için geliştirdiği açık kaynak ORM’idir.
+Hem RDBMS ile çalışır (SQL Server, PostgreSQL, MySQL) hem de LINQ ile veri sorgulama sağlar.
+
+- DbContext nedir, nasıl kullanılır?
+
+  DbContext, Entity Framework (EF / EF Core) ile veritabanı işlemlerini yöneten ana sınıftır. Amacı, veritabanı bağlantısı kurmak, tabloları (DbSet’leri) yönetmek ve CRUD işlemlerini nesne odaklı şekilde gerçekleştirmek.
+
+- LINQ nedir? En çok kullanılan LINQ ifadeleri
+
+  LINQ (Language Integrated Query), Microsoft tarafından geliştirilen bir programlama tekniğidir. LINQ, .NET programlama dillerinde (C#, Visual Basic, vb.) veri koleksiyonları üzerinde sorgulama ve manipülasyon yapmayı kolaylaştıran bir yol sunar. En sık kullanılanlar: Where, Select, FirstOrDefault, OrderBy, GroupBy, Any, All, Count, Sum, Average.
+
+| LINQ Örneği | Açıklama | SQL Karşılığı |
+|-------------|----------|---------------|
+| `var adults = people.Where(p => p.Age >= 18);` | Yaşı 18 ve üzeri kişileri filtreler | `SELECT * FROM People WHERE Age >= 18;` |
+| `var names = people.Select(p => p.Name);` | Sadece isimleri seçer | `SELECT Name FROM People;` |
+| `var sorted = people.OrderBy(p => p.Age);` | Yaşa göre artan sıralama | `SELECT * FROM People ORDER BY Age ASC;` |
+| `var totalSalary = employees.Sum(e => e.Salary);` | Maaş toplamını hesaplar | `SELECT SUM(Salary) FROM Employees;` |
+
+- Code-First ve Database-First yaklaşımı nedir?
+
+  Code-First, önce C# sınıfları (model) yazılır, EF Core bu sınıflardan veritabanını oluşturur.
+  Database-First, önce veritabanı tasarlanır, EF Core modelleri veritabanından oluşturulur.
+
+# Code-First vs Database-First
+
+| Özellik | Code-First | Database-First |
+|---------|------------|----------------|
+| Tanım | Önce C# sınıfları yazılır, veritabanı bu sınıflardan oluşturulur | Önce veritabanı tasarlanır, modeller veritabanından üretilir |
+| Geliştirme Akışı | Kod → Veritabanı | Veritabanı → Kod |
+| Avantaj | - Hızlı prototipleme<br>- Kod odaklı geliştirme<br>- Migration ile şema güncellemeleri kolay | - Mevcut veritabanı ile uyumlu<br>- Kurumsal projeler için ideal |
+| Dezavantaj | Mevcut büyük veritabanları için uygun değil | Koddan bağımsız, şema değişiklikleri zor |
+| Kullanım Alanı | Yeni projeler, hızlı geliştirme | Mevcut veritabanı, büyük kurumsal uygulamalar |
+
+- Temel SQL sorguları: SELECT, INSERT, UPDATE, DELETE
+
+  SELECT : Veritabanındaki verileri sorgulamak için kullanılır .Bu komut veritabanındaki belirli bir tablodan belirli bir sütunu seçmek için kullanılır.
+
+SELECT description,name,price,quantity FROM products;
+
+  INSERT INTO : Veritabanındaki tablolarımıza yeni veriler eklemek için kullanılır.
+
+  INSERT INTO table_name (column1, column2, column3, ...)
+VALUES (value1, value2, value3, ...);
+
+  UPDATE : Veritabanındaki bir kaydı güncellemek için kullanılır.
+
+  UPDATE products set price = 38000 where id = 11
+  
+  DELETE : Veritabanındaki verileri silmemizi sağlar.
+
+  DELETE FROM products where id = 11 ;
+
+6. Güvenlik ve Performans
+
+- Authentication vs Authorization nedir?
+
+  Authentication (Kimlik Doğrulama), bir kullanıcının gerçekten iddia ettiği kişi olup olmadığını kontrol etme sürecidir. Bu aşamada sistem, kullanıcının **kim olduğunu** doğrular.Genellikle kullanıcı adı–şifre, JWT token, OAuth veya tek oturum açma (SSO) gibi yöntemler kullanılır. Authentication, uygulamaya giriş (login) sırasında gerçekleşir.
+
+  Authorization (Yetkilendirme) ise kimliği doğrulanmış bir kullanıcının
+hangi işlemleri yapabileceğini belirleme sürecidir. Kullanıcının belirli bir kaynağa erişip erişemeyeceği, rolü veya sahip olduğu izinlere göre kontrol edilir. Örneğin bir kullanıcının yalnızca veri görüntüleyebilmesi, ancak silme işlemini yapamaması authorization ile belirlenir.
+
+- JWT (JSON Web Token) nedir, nasıl çalışır? JWT yapısının temel bileşenleri nelerdir?
+
+  JWT (JSON Web Token), istemci ile sunucu arasında kimlik doğrulama ve yetkilendirme bilgilerini güvenli şekilde taşımak için kullanılan, kompakt ve durumsuz (stateless) bir token formatıdır. Özellikle RESTful API’lerde yaygın olarak kullanılır.
+  JWT’nin çalışma sürecinde kullanıcı sisteme giriş yapar, sunucu bilgileri doğrular ve bir JWT üretir. Bu token istemciye gönderilir ve istemci sonraki her istekte token’ı sunucuya iletir. Sunucu token’ı doğrular; geçerliyse isteğe izin verir, geçersizse erişimi reddeder. Böylece sunucu tarafında oturum bilgisi tutulmasına gerek kalmaz.
+  JWT üç temel bileşenden oluşur. Header, token’ın türünü (JWT) ve kullanılan imzalama algoritmasını belirtir. Payload, kullanıcıya veya oturuma ait bilgileri (claim’leri) içerir. Signature ise token’ın değiştirilmediğini ve güvenilir bir kaynaktan geldiğini doğrulamak için kullanılır.
+
+- OAuth, OAuth2.0, OpenIddict, OpenID nedir? Aralarındaki ilişki
+
+
+
+
+  
+
+
+
+
+
+        
