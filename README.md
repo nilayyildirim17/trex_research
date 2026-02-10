@@ -347,27 +347,6 @@ Kanban, işlerin görsel bir pano üzerinden yönetildiği, akış odaklı bir y
 
 ### .NET Framework, .NET Core ve .NET 7/8+ farkları
 
-| Özellik | .NET Framework | .NET Core | .NET 7 / 8+ |
-|------|---------------|----------|-------------|
-| İlk Çıkış | 2002 | 2016 | 2022+ |
-| Geliştirici | Microsoft | Microsoft + Topluluk | Microsoft + Topluluk |
-| Platform Desteği | Sadece Windows | Windows, Linux, macOS | Windows, Linux, macOS |
-| Açık Kaynak | Hayır | Evet | Evet |
-| Mimari | Monolitik | Modüler | Birleşik ve Modüler |
-| Performans | Orta | Yüksek | Çok Yüksek |
-| CLI Desteği | Zayıf | Güçlü | Çok Güçlü |
-| Cloud Uyumu | Sınırlı | İyi | Çok İyi |
-| Docker Desteği | Hayır | Evet | Evet |
-| Mikroservis Desteği | Hayır | Evet | Evet |
-| Web Framework | ASP.NET | ASP.NET Core | ASP.NET Core |
-| Masaüstü | WinForms, WPF | Sınırlı | WinForms, WPF |
-| Mobil Geliştirme | Hayır | Hayır | Evet (.NET MAUI) |
-| Güvenlik Güncellemeleri | Sınırlı | Sonlandırıldı | Aktif |
-| LTS Desteği | Hayır | Hayır | Evet (.NET 8) |
-| Yeni Projeler İçin | Önerilmez | Önerilmez | Önerilir |
-
-#### Detaylı Karşılaştırma
-
 | Temel Alınan | .NET Core | .NET Framework | .NET 7 / 8+ |
 |-------------|----------|----------------|-------------|
 | Açık Kaynak | Açık kaynaklıdır. | Bazı bileşenleri açık kaynaklıdır. | Tamamen açık kaynaklıdır. |
